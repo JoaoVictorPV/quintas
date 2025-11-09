@@ -15,14 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
             loginOverlay.style.opacity = '0';
             setTimeout(() => {
                 loginOverlay.style.display = 'none';
-                appContainer.style.display = 'flex';
-                footer.style.display = 'block';
                 
-                // Garante que o DOM foi renderizado antes de calcular as dimensões
-                requestAnimationFrame(() => {
-                    setTimeout(setupCirculos, 0);
-                });
-
+                // Força o cálculo do layout antes de posicionar as notas
+                appContainer.style.display = 'block'; // Temporariamente block
+                setupCirculos(); // Renderiza os círculos com as dimensões corretas
+                appContainer.style.display = 'flex'; // Restaura para flex
+                
+                footer.style.display = 'block';
             }, 500); // Corresponde à transição do CSS
         } else {
             loginError.textContent = 'Login ou senha inválidos.';
