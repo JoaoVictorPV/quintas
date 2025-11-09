@@ -3,26 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Círculo das Quintas</title>
-    <link rel="stylesheet" href="login.css">
+    <title>Círculo das Quintas Interativo</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1>Acesso ao Círculo das Quintas</h1>
-            <p>Por favor, insira suas credenciais para continuar.</p>
-            <form id="login-form">
-                <div class="input-group">
-                    <input type="text" id="username" placeholder="Login" required>
+    <div id="app-container">
+        <div id="circulos-container">
+            <div class="circulo" id="circulo-principal"></div>
+            <div class="circulo" id="circulo-relativo"></div>
+            <div class="circulo" id="circulo-auxiliar"></div>
+        </div>
+        <div id="display-info">
+            <div class="initial-message">
+                <div class="initial-background"></div>
+                <div class="initial-content">
+                    <h2>Explore a Harmonia</h2>
+                    <h1>Círculo das Quintas</h1>
+                    <p>Navegue pelas tonalidades, descubra escalas e aprofunde seus conhecimentos musicais de forma interativa.</p>
+                    <div class="instructions">
+                        <div class="instruction-item">
+                            <span class="icon">🖱️</span>
+                            <p><strong>Desktop:</strong> Clique em uma nota para ver os detalhes. Segure <strong>Shift + Arraste</strong> para girar os círculos.</p>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="icon">👆</span>
+                            <p><strong>Tablet:</strong> Toque em uma nota para ver os detalhes. Use <strong>dois dedos</strong> para girar os círculos.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <input type="password" id="password" placeholder="Senha" required>
-                </div>
-                <button type="submit">Entrar</button>
-                <p id="error-message" class="error-message"></p>
-            </form>
+            </div>
         </div>
     </div>
-    <script src="login.js"></script>
+    <footer>
+        <p>🎵 Website criado por João Victor Pruner Vieira 🎶</p>
+    </footer>
+    <script src="app.js"></script>
 </body>
 </html>
