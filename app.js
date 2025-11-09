@@ -56,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
             notaElement.textContent = nota;
             notaElement.style.left = `${x}px`;
             notaElement.style.top = `${y}px`;
-            notaElement.addEventListener('click', () => exibirInfoNota(nota));
             circuloElement.appendChild(notaElement);
         });
     }
@@ -134,28 +133,89 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lógica de rotação robusta
+    // --- Lógica de Interação Robusta (Clique e Rotação) ---
+
+    let isDragging = false;
+    let dragStartPoint = { x: 0, y: 0 };
     let activeTouches = {};
-    let initialAngle = -1;
+    let initialTouchAngle = -1;
 
     circulos.forEach(circulo => {
-        // Rotação com Mouse (Shift + Drag)
+        // Eventos de Mouse
         circulo.addEventListener('mousedown', (e) => {
-            if (!e.shiftKey) return;
-            iniciarRotacaoMouse(e, circulo);
+            if (e.target.classList.contains('nota')) {
+                // Prepara para diferenciar clique de arrasto
+                isDragging = false;
+                dragStartPoint = { x: e.clientX, y: e.clientY };
+                
+                const onMouseMove = (moveE) => {
+                    const dx = moveE.clientX - dragStartPoint.x;
+                    const dy = moveE.clientY - dragStartPoint.y;
+                    if (Math.sqrt(dx*dx + dy*dy) > 5) { // Dead zone
+                        isDragging = true;
+                    }
+                };
+
+                const onMouseUp = (upE) => {
+                    if (!isDragging) {
+                        exibirInfoNota(upE.target.dataset.tonica);
+                    }
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+
+            } else if (e.shiftKey) {
+                iniciarRotacaoMouse(e, circulo);
+            }
         });
 
-        // Rotação com Toque (2 dedos)
+        // Eventos de Toque
         circulo.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            isDragging = false;
+            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 activeTouches[e.changedTouches[i].identifier] = { touch: e.changedTouches[i], circulo: circulo };
             }
-            if (Object.keys(activeTouches).length >= 2) {
+
+            if (Object.keys(activeTouches).length >= 2) { // Rotação com 2 dedos
                 const touches = Object.values(activeTouches).map(t => t.touch);
-                initialAngle = Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX) * 180 / Math.PI;
+                initialTouchAngle = Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX) * 180 / Math.PI;
+            } else { // Prepara para clique com 1 dedo
+                dragStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
         }, { passive: false });
+
+        circulo.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length >= 2) { // Rotação com 2 dedos
+                isDragging = true;
+                rotacionarComDoisDedos(e);
+            } else { // Verifica se é um arrasto com 1 dedo
+                const dx = e.touches[0].clientX - dragStartPoint.x;
+                const dy = e.touches[0].clientY - dragStartPoint.y;
+                if (Math.sqrt(dx*dx + dy*dy) > 10) {
+                    isDragging = true;
+                }
+            }
+        }, { passive: false });
+
+        circulo.addEventListener('touchend', (e) => {
+            if (!isDragging && e.target.classList.contains('nota')) {
+                exibirInfoNota(e.target.dataset.tonica);
+            }
+            
+            // Limpa os toques ativos
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                delete activeTouches[e.changedTouches[i].identifier];
+            }
+            if (Object.keys(activeTouches).length < 2) {
+                initialTouchAngle = -1;
+            }
+        });
     });
 
     function iniciarRotacaoMouse(e, circulo) {
@@ -168,8 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function rotacionarMouse(moveEvent) {
             const anguloMouseAtual = Math.atan2(moveEvent.clientY - centroY, moveEvent.clientX - centroX);
             const deltaAngulo = (anguloMouseAtual - anguloMouseInicial) * (180 / Math.PI);
-            let novoAngulo = anguloInicialElemento + deltaAngulo;
-            aplicarRotacao(circulo, novoAngulo);
+            aplicarRotacao(circulo, anguloInicialElemento + deltaAngulo);
         }
 
         function pararRotacaoMouse() {
@@ -183,10 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', pararRotacaoMouse);
     }
 
-    document.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+    function rotacionarComDoisDedos(e) {
         const touches = e.touches;
-        if (touches.length < 2) return;
+        if (touches.length < 2 || initialTouchAngle === -1) return;
 
         let circuloEmFoco = null;
         for (const id in activeTouches) {
@@ -198,31 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!circuloEmFoco) return;
 
         const currentAngle = Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX) * 180 / Math.PI;
-        const deltaAngle = currentAngle - initialAngle;
-        let novoAngulo = angulosAtuais[circuloEmFoco.id] + deltaAngle;
+        const deltaAngle = currentAngle - initialTouchAngle;
+        const novoAngulo = angulosAtuais[circuloEmFoco.id] + deltaAngle;
         aplicarRotacao(circuloEmFoco, novoAngulo);
-    }, { passive: false });
-
-    document.addEventListener('touchend', (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touchId = e.changedTouches[i].identifier;
-            if (activeTouches[touchId]) {
-                const circulo = activeTouches[touchId].circulo;
-                const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(circulo).transform);
-                angulosAtuais[circulo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180 / Math.PI));
-                delete activeTouches[touchId];
-            }
-        }
-        if (Object.keys(activeTouches).length < 2) {
-            initialAngle = -1;
-        }
-    });
+    }
 
     function aplicarRotacao(elemento, angulo) {
         elemento.style.transform = `rotate(${angulo}deg)`;
-        const notasDoCirculo = elemento.querySelectorAll('.nota');
-        notasDoCirculo.forEach(nota => {
+        elemento.querySelectorAll('.nota').forEach(nota => {
             nota.style.transform = `rotate(${-angulo}deg)`;
         });
     }
+
+    // Inicia a aplicação
+    setupCirculos();
 });
