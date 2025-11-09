@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginOverlay.style.display = 'none';
                 appContainer.style.display = 'flex';
                 footer.style.display = 'block';
+                // Inicia a lógica do círculo APÓS a exibição do container
+                setupCirculos();
             }, 500); // Corresponde à transição do CSS
         } else {
             loginError.textContent = 'Login ou senha inválidos.';
@@ -293,6 +295,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inicia a aplicação
-    setupCirculos();
+    // A aplicação agora é iniciada dentro do callback de sucesso do login
 });
