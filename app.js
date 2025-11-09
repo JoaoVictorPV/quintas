@@ -29,49 +29,132 @@ document.addEventListener('DOMContentLoaded', () => {
         'Dm': { relativa: 'F', info: ['Ré - Mi - Fá - Sol - Lá - Sib - Dó'], imagens: ['assets/min/dmin1.png', 'assets/min/dmin2.png', 'assets/min/dmin3.png'] }
     };
 
-    const circulos = document.querySelectorAll('.circulo');
+    const circulosContainer = document.getElementById('circulos-container');
     const displayInfo = document.getElementById('display-info');
     let imagemAtualIndex = 0;
     let imagensAtuais = [];
+    let angulosAtuais = { 'circulo-principal': 0, 'circulo-relativo': 0, 'circulo-auxiliar': 0 };
 
-    function posicionarNotas(circuloElement) {
-        const notasAtuais = circuloElement.querySelectorAll('.nota');
-        notasAtuais.forEach(nota => nota.remove());
-
-        const raio = circuloElement.offsetWidth / 2 - 30;
-        const isRelativo = circuloElement.id === 'circulo-relativo';
-        const dataAtual = isRelativo ? dataMenores : dataMaiores;
-        const notasNomes = Object.keys(dataAtual);
-
-        notasNomes.forEach((nota, index) => {
-            const angulo = (index / 12) * 2 * Math.PI - (Math.PI / 2);
-            const centro = circuloElement.offsetWidth / 2;
-            const x = centro + raio * Math.cos(angulo) - 25;
-            const y = centro + raio * Math.sin(angulo) - 25;
-
-            const notaElement = document.createElement('div');
-            notaElement.classList.add('nota');
-            notaElement.dataset.tonica = nota;
-            notaElement.textContent = nota;
-            notaElement.style.left = `${x}px`;
-            notaElement.style.top = `${y}px`;
-            notaElement.addEventListener('click', exibirInfoNota);
-            circuloElement.appendChild(notaElement);
+    function setupCirculos() {
+        document.querySelectorAll('.circulo').forEach(circulo => {
+            posicionarNotas(circulo);
+            posicionarHandles(circulo);
+            setupRotacaoHandle(circulo);
         });
     }
 
-    circulos.forEach(posicionarNotas);
+    function posicionarNotas(circulo) {
+        const notasAtuais = circulo.querySelectorAll('.nota');
+        notasAtuais.forEach(nota => nota.remove());
+
+        const raio = circulo.offsetWidth / 2 - 30;
+        const data = circulo.id === 'circulo-relativo' ? dataMenores : dataMaiores;
+        const notasNomes = Object.keys(data);
+        const centro = circulo.offsetWidth / 2;
+
+        notasNomes.forEach((nome, index) => {
+            const angulo = (index / 12) * 2 * Math.PI - (Math.PI / 2);
+            const x = centro + raio * Math.cos(angulo) - 22.5;
+            const y = centro + raio * Math.sin(angulo) - 22.5;
+
+            const notaEl = document.createElement('div');
+            notaEl.className = 'nota';
+            notaEl.dataset.tonica = nome;
+            notaEl.textContent = nome;
+            notaEl.style.left = `${x}px`;
+            notaEl.style.top = `${y}px`;
+            
+            // Eventos para clique robusto em touch e desktop
+            notaEl.addEventListener('touchend', exibirInfoNota);
+            notaEl.addEventListener('mouseup', exibirInfoNota);
+
+            circulo.appendChild(notaEl);
+        });
+    }
+
+    function posicionarHandles(circulo) {
+        const handles = circulo.querySelectorAll('.handle');
+        const raio = circulo.offsetWidth / 2;
+        const centro = circulo.offsetWidth / 2;
+
+        handles.forEach((handle, index) => {
+            const angulo = (index / handles.length) * 2 * Math.PI;
+            const x = centro + raio * Math.cos(angulo) - 10;
+            const y = centro + raio * Math.sin(angulo) - 10;
+            handle.style.left = `${x}px`;
+            handle.style.top = `${y}px`;
+        });
+    }
+
+    function setupRotacaoHandle(circulo) {
+        const handles = circulo.querySelectorAll('.handle');
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', e => iniciarRotacao(e, circulo));
+            handle.addEventListener('touchstart', e => iniciarRotacao(e, circulo));
+        });
+    }
+
+    function iniciarRotacao(e, circulo) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = circulo.getBoundingClientRect();
+        const centroX = rect.left + rect.width / 2;
+        const centroY = rect.top + rect.height / 2;
+        const anguloInicialElemento = angulosAtuais[circulo.id];
+
+        const moveEvent = e.type === 'touchstart' ? 'touchmove' : 'mousemove';
+        const endEvent = e.type === 'touchend' || e.type === 'mouseup' ? e.type : (e.type === 'touchstart' ? 'touchend' : 'mouseup');
+
+        const pontoInicial = getPonto(e);
+        const anguloMouseInicial = Math.atan2(pontoInicial.y - centroY, pontoInicial.x - centroX);
+
+        function rotacionar(eMove) {
+            const pontoAtual = getPonto(eMove);
+            const anguloMouseAtual = Math.atan2(pontoAtual.y - centroY, pontoAtual.x - centroX);
+            const deltaAngulo = (anguloMouseAtual - anguloMouseInicial) * (180 / Math.PI);
+            const novoAngulo = anguloInicialElemento + deltaAngulo;
+            aplicarRotacao(circulo, novoAngulo);
+        }
+
+        function pararRotacao() {
+            const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(circulo).transform);
+            angulosAtuais[circulo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180 / Math.PI));
+            document.removeEventListener(moveEvent, rotacionar);
+            document.removeEventListener(endEvent, pararRotacao);
+        }
+
+        document.addEventListener(moveEvent, rotacionar);
+        document.addEventListener(endEvent, pararRotacao);
+    }
+    
+    function getPonto(e) {
+        return e.touches ? e.touches[0] : e;
+    }
+
+    function aplicarRotacao(elemento, angulo) {
+        elemento.style.transform = `rotate(${angulo}deg)`;
+        elemento.querySelectorAll('.nota, .handle').forEach(el => {
+            el.style.transform = `rotate(${-angulo}deg)`;
+        });
+    }
 
     function exibirInfoNota(e) {
+        e.preventDefault();
         e.stopPropagation();
-        const tonica = this.dataset.tonica;
+        const tonica = e.currentTarget.dataset.tonica;
         const dados = dataMaiores[tonica] || dataMenores[tonica];
         if (!dados) return;
 
+        // Limpa a mensagem inicial se existir
+        const initialMessage = displayInfo.querySelector('.initial-message');
+        if (initialMessage) {
+            initialMessage.remove();
+        }
+        
+        // Limpa conteúdo anterior
         displayInfo.innerHTML = '';
-        displayInfo.style.display = 'flex';
 
-        // Cria o cabeçalho fixo
         const infoHeader = document.createElement('div');
         infoHeader.id = 'info-header';
         const titulo = document.createElement('h3');
@@ -83,14 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
             infoHeader.appendChild(p);
         });
 
-        // Cria a área de conteúdo rolável
         const infoContent = document.createElement('div');
         infoContent.id = 'info-content';
 
         if (dados.imagens && dados.imagens.length > 0) {
             imagensAtuais = dados.imagens;
             imagemAtualIndex = 0;
-            criarVisualizadorDeImagem(infoContent); // Passa o container de conteúdo como argumento
+            criarVisualizadorDeImagem(infoContent);
         }
 
         displayInfo.appendChild(infoHeader);
@@ -108,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const navContainer = document.createElement('div');
         navContainer.id = 'imagem-nav';
 
-        // Cria botões dinamicamente (1, 2 ou 1, 2, 3)
         for (let i = 0; i < imagensAtuais.length; i++) {
             const btn = document.createElement('button');
             btn.textContent = i + 1;
@@ -118,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         container.appendChild(img);
         container.appendChild(navContainer);
-        containerPai.appendChild(container); // Adiciona ao container de conteúdo
+        containerPai.appendChild(container);
         atualizarBotoesAtivos();
     }
 
@@ -131,100 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function atualizarBotoesAtivos() {
         const botoes = document.querySelectorAll('#imagem-nav button');
         botoes.forEach((btn, index) => {
-            if (index === imagemAtualIndex) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            btn.classList.toggle('active', index === imagemAtualIndex);
         });
     }
 
-    // Lógica de rotação (mouse com Shift e toque com 2 dedos)
-    let angulosAtuais = {};
-    circulos.forEach(c => angulosAtuais[c.id] = 0);
-    
-    // Rotação com Mouse
-    circulos.forEach(circulo => {
-        circulo.addEventListener('mousedown', (e) => {
-            if (!e.shiftKey) return;
-            iniciarRotacaoMouse(e, circulo);
-        });
-    });
-
-    function iniciarRotacaoMouse(e, circulo) {
-        let elementoAtivo = circulo;
-        const rect = elementoAtivo.getBoundingClientRect();
-        const centroX = rect.left + rect.width / 2;
-        const centroY = rect.top + rect.height / 2;
-        const anguloMouseInicial = Math.atan2(e.clientY - centroY, e.clientX - centroX);
-        const anguloInicialElemento = angulosAtuais[elementoAtivo.id];
-
-        function rotacionarMouse(e) {
-            const anguloMouseAtual = Math.atan2(e.clientY - centroY, e.clientX - centroX);
-            const deltaAngulo = (anguloMouseAtual - anguloMouseInicial) * (180 / Math.PI);
-            let novoAngulo = anguloInicialElemento + deltaAngulo;
-            aplicarRotacao(elementoAtivo, novoAngulo);
-        }
-
-        function pararRotacaoMouse() {
-            const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(elementoAtivo).transform);
-            angulosAtuais[elementoAtivo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180/Math.PI));
-            document.removeEventListener('mousemove', rotacionarMouse);
-            document.removeEventListener('mouseup', pararRotacaoMouse);
-        }
-
-        document.addEventListener('mousemove', rotacionarMouse);
-        document.addEventListener('mouseup', pararRotacaoMouse);
-    }
-
-    // Rotação com Toque (Lógica aprimorada)
-    let touchState = {};
-
-    circulos.forEach(circulo => {
-        circulo.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (e.touches.length === 2) {
-                const rect = circulo.getBoundingClientRect();
-                touchState = {
-                    rotating: true,
-                    element: circulo,
-                    initialAngle: getAngle(e.touches[0], e.touches[1]),
-                    elementAngle: angulosAtuais[circulo.id],
-                    centroX: rect.left + rect.width / 2,
-                    centroY: rect.top + rect.height / 2,
-                };
-            }
-        }, { passive: false });
-    });
-
-    document.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (touchState.rotating && e.touches.length === 2) {
-            const currentAngle = getAngle(e.touches[0], e.touches[1]);
-            const deltaAngle = currentAngle - touchState.initialAngle;
-            const novoAngulo = touchState.elementAngle + deltaAngle;
-            aplicarRotacao(touchState.element, novoAngulo);
-        }
-    }, { passive: false });
-
-    document.addEventListener('touchend', (e) => {
-        if (touchState.rotating) {
-            const elementoAtivo = touchState.element;
-            const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(elementoAtivo).transform);
-            angulosAtuais[elementoAtivo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180 / Math.PI));
-            touchState = {}; // Reseta o estado
-        }
-    });
-
-    function getAngle(t1, t2) {
-        return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
-    }
-
-    function aplicarRotacao(elemento, angulo) {
-        elemento.style.transform = `rotate(${angulo}deg)`;
-        const notasDoCirculo = elemento.querySelectorAll('.nota');
-        notasDoCirculo.forEach(nota => {
-            nota.style.transform = `rotate(${-angulo}deg)`;
-        });
-    }
+    // Inicia a aplicação
+    setupCirculos();
 });
