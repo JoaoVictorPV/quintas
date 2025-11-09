@@ -9,11 +9,9 @@ body {
 }
 
 #app-container {
-    display: flex;
-    flex-direction: column; /* Layout padrão em coluna */
+    display: flex; /* Layout lado a lado por padrão */
     width: 100%;
-    height: 100vh;
-    overflow-y: auto; /* Permite rolagem vertical */
+    height: 100%;
 }
 
 #circulos-container {
@@ -22,7 +20,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
 }
 
 @keyframes futuristic-glow {
@@ -94,11 +91,11 @@ body {
 #display-info {
     flex: 1;
     background-color: #222;
-    border-top: 1px solid #444; /* Borda superior */
+    border-left: 1px solid #444; /* Volta a borda lateral */
     display: flex;
     flex-direction: column;
-    height: auto; /* Altura automática */
-    overflow: visible;
+    height: 100vh;
+    overflow: hidden;
 }
 
 #display-info .initial-message {
@@ -280,9 +277,33 @@ footer {
     background-color: #111;
     color: #888;
     text-align: center;
-    padding: 20px;
+    padding: 15px;
     font-size: 0.9em;
     border-top: 1px solid #333;
+    position: absolute; /* Garante que fique no rodapé */
+    bottom: 0;
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Media query para layout de coluna em telas menores */
+@media (max-width: 1024px) {
+    body {
+        overflow-y: auto; /* Permite rolagem no corpo da página */
+    }
+    #app-container {
+        flex-direction: column;
+        height: auto;
+    }
+    #circulos-container {
+        flex-basis: 500px;
+    }
+    #display-info {
+        border-left: none;
+        border-top: 1px solid #444;
+        height: auto;
+    }
+    footer {
+        position: relative; /* Volta ao fluxo normal do documento */
+    }
 }
