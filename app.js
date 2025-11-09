@@ -103,29 +103,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const centroY = rect.top + rect.height / 2;
         const anguloInicialElemento = angulosAtuais[circulo.id];
 
-        const moveEvent = e.type === 'touchstart' ? 'touchmove' : 'mousemove';
-        const endEvent = e.type === 'touchend' || e.type === 'mouseup' ? e.type : (e.type === 'touchstart' ? 'touchend' : 'mouseup');
-
         const pontoInicial = getPonto(e);
         const anguloMouseInicial = Math.atan2(pontoInicial.y - centroY, pontoInicial.x - centroX);
 
-        function rotacionar(eMove) {
+        const rotacionar = (eMove) => {
             const pontoAtual = getPonto(eMove);
             const anguloMouseAtual = Math.atan2(pontoAtual.y - centroY, pontoAtual.x - centroX);
             const deltaAngulo = (anguloMouseAtual - anguloMouseInicial) * (180 / Math.PI);
             const novoAngulo = anguloInicialElemento + deltaAngulo;
             aplicarRotacao(circulo, novoAngulo);
-        }
+        };
 
-        function pararRotacao() {
+        const pararRotacao = () => {
             const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(circulo).transform);
             angulosAtuais[circulo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180 / Math.PI));
-            document.removeEventListener(moveEvent, rotacionar);
-            document.removeEventListener(endEvent, pararRotacao);
-        }
+            document.removeEventListener('mousemove', rotacionar);
+            document.removeEventListener('mouseup', pararRotacao);
+            document.removeEventListener('touchmove', rotacionar);
+            document.removeEventListener('touchend', pararRotacao);
+        };
 
-        document.addEventListener(moveEvent, rotacionar);
-        document.addEventListener(endEvent, pararRotacao);
+        if (e.type === 'touchstart') {
+            document.addEventListener('touchmove', rotacionar, { passive: false });
+            document.addEventListener('touchend', pararRotacao);
+        } else {
+            document.addEventListener('mousemove', rotacionar);
+            document.addEventListener('mouseup', pararRotacao);
+        }
     }
     
     function getPonto(e) {
@@ -197,8 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
             navContainer.appendChild(btn);
         }
         
-        container.appendChild(img);
+        // Adiciona a navegação ANTES da imagem
         container.appendChild(navContainer);
+        container.appendChild(img);
         containerPai.appendChild(container);
         atualizarBotoesAtivos();
     }

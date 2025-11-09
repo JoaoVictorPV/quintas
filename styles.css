@@ -69,13 +69,13 @@ body {
 
 .handle {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 10px; /* 50% do tamanho original */
+    height: 10px;
     background-color: #00ffff;
     border-radius: 50%;
     cursor: grab;
     z-index: 10;
-    box-shadow: 0 0 10px #00ffff;
+    box-shadow: 0 0 8px #00ffff;
 }
 
 .handle:active {
@@ -254,6 +254,7 @@ body {
 #imagem-nav {
     display: flex;
     gap: 15px;
+    margin-bottom: 15px; /* Espaçamento entre botões e imagem */
 }
 
 #imagem-nav button {
@@ -286,5 +287,14 @@ body {
     #circulo-auxiliar { width: 280px; height: 280px; }
     #circulo-relativo { width: 160px; height: 160px; }
     .nota { width: 38px; height: 38px; font-size: 0.9em; }
-    .handle { width: 15px; height: 15px; }
+    .handle { width: 10px; height: 10px; }
+}
+
+footer {
+    background-color: #111;
+    color: #888;
+    text-align: center;
+    padding: 15px;
+    font-size: 0.9em;
+    border-top: 1px solid #333;
 }
