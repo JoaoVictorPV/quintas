@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'Dm': { relativa: 'F', info: ['Ré - Mi - Fá - Sol - Lá - Sib - Dó'], imagens: ['assets/min/dmin1.png', 'assets/min/dmin2.png', 'assets/min/dmin3.png'] }
     };
 
-    const circulosContainer = document.getElementById('circulos-container');
     const displayInfo = document.getElementById('display-info');
     let imagemAtualIndex = 0;
     let imagensAtuais = [];
@@ -38,8 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupCirculos() {
         document.querySelectorAll('.circulo').forEach(circulo => {
             posicionarNotas(circulo);
-            posicionarHandles(circulo);
-            setupRotacaoHandle(circulo);
+            setupRotacao(circulo);
         });
     }
 
@@ -63,50 +61,64 @@ document.addEventListener('DOMContentLoaded', () => {
             notaEl.textContent = nome;
             notaEl.style.left = `${x}px`;
             notaEl.style.top = `${y}px`;
-            
-            // Eventos para clique robusto em touch e desktop
-            notaEl.addEventListener('touchend', exibirInfoNota);
-            notaEl.addEventListener('mouseup', exibirInfoNota);
-
             circulo.appendChild(notaEl);
         });
     }
 
-    function posicionarHandles(circulo) {
-        const handles = circulo.querySelectorAll('.handle');
-        const raio = circulo.offsetWidth / 2;
-        const centro = circulo.offsetWidth / 2;
+    function setupRotacao(circulo) {
+        let isDragging = false;
+        let dragStartPos = { x: 0, y: 0 };
 
-        handles.forEach((handle, index) => {
-            const angulo = (index / handles.length) * 2 * Math.PI;
-            const x = centro + raio * Math.cos(angulo) - 10;
-            const y = centro + raio * Math.sin(angulo) - 10;
-            handle.style.left = `${x}px`;
-            handle.style.top = `${y}px`;
-        });
-    }
+        const iniciarDrag = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isDragging = false; // Reseta o estado de arrasto
+            dragStartPos = getPonto(e);
 
-    function setupRotacaoHandle(circulo) {
-        const handles = circulo.querySelectorAll('.handle');
-        handles.forEach(handle => {
-            handle.addEventListener('mousedown', e => iniciarRotacao(e, circulo));
-            handle.addEventListener('touchstart', e => iniciarRotacao(e, circulo));
-        });
+            const moveEvent = e.type === 'touchstart' ? 'touchmove' : 'mousemove';
+            const endEvent = e.type === 'touchstart' ? 'touchend' : 'mouseup';
+
+            const onMove = (eMove) => {
+                const pontoAtual = getPonto(eMove);
+                const deltaX = pontoAtual.x - dragStartPos.x;
+                const deltaY = pontoAtual.y - dragStartPos.y;
+                // Se o movimento for maior que a "zona morta", considera como arrasto
+                if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                    isDragging = true;
+                    iniciarRotacao(e, circulo); // Inicia a lógica de rotação
+                    document.removeEventListener(moveEvent, onMove); // Remove este listener para não ser chamado de novo
+                }
+            };
+
+            const onEnd = (eEnd) => {
+                if (!isDragging) {
+                    // Se não houve arrasto, verifica se o alvo é uma nota para tratar como clique
+                    if (eEnd.target.classList.contains('nota')) {
+                        exibirInfoNota(eEnd.target);
+                    }
+                }
+                document.removeEventListener(moveEvent, onMove);
+                document.removeEventListener(endEvent, onEnd);
+            };
+
+            document.addEventListener(moveEvent, onMove, { passive: false });
+            document.addEventListener(endEvent, onEnd);
+        };
+
+        circulo.addEventListener('mousedown', iniciarDrag);
+        circulo.addEventListener('touchstart', iniciarDrag, { passive: false });
     }
 
     function iniciarRotacao(e, circulo) {
-        e.preventDefault();
-        e.stopPropagation();
-
         const rect = circulo.getBoundingClientRect();
         const centroX = rect.left + rect.width / 2;
         const centroY = rect.top + rect.height / 2;
         const anguloInicialElemento = angulosAtuais[circulo.id];
-
         const pontoInicial = getPonto(e);
         const anguloMouseInicial = Math.atan2(pontoInicial.y - centroY, pontoInicial.x - centroX);
 
         const rotacionar = (eMove) => {
+            eMove.preventDefault();
             const pontoAtual = getPonto(eMove);
             const anguloMouseAtual = Math.atan2(pontoAtual.y - centroY, pontoAtual.x - centroX);
             const deltaAngulo = (anguloMouseAtual - anguloMouseInicial) * (180 / Math.PI);
@@ -131,32 +143,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('mouseup', pararRotacao);
         }
     }
-    
+
     function getPonto(e) {
         return e.touches ? e.touches[0] : e;
     }
 
     function aplicarRotacao(elemento, angulo) {
         elemento.style.transform = `rotate(${angulo}deg)`;
-        elemento.querySelectorAll('.nota, .handle').forEach(el => {
+        elemento.querySelectorAll('.nota').forEach(el => {
             el.style.transform = `rotate(${-angulo}deg)`;
         });
     }
 
-    function exibirInfoNota(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const tonica = e.currentTarget.dataset.tonica;
+    function exibirInfoNota(targetElement) {
+        const tonica = targetElement.dataset.tonica;
         const dados = dataMaiores[tonica] || dataMenores[tonica];
         if (!dados) return;
 
-        // Limpa a mensagem inicial se existir
         const initialMessage = displayInfo.querySelector('.initial-message');
-        if (initialMessage) {
-            initialMessage.remove();
-        }
+        if (initialMessage) initialMessage.remove();
         
-        // Limpa conteúdo anterior
         displayInfo.innerHTML = '';
 
         const infoHeader = document.createElement('div');
@@ -201,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
             navContainer.appendChild(btn);
         }
         
-        // Adiciona a navegação ANTES da imagem
         container.appendChild(navContainer);
         container.appendChild(img);
         containerPai.appendChild(container);
@@ -221,6 +226,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inicia a aplicação
     setupCirculos();
 });
