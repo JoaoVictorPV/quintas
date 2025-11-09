@@ -142,23 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lógica de rotação (mouse com Shift e toque com 2 dedos)
     let angulosAtuais = {};
     circulos.forEach(c => angulosAtuais[c.id] = 0);
-    let activeTouches = {};
-    let initialAngle = -1;
-
+    
+    // Rotação com Mouse
     circulos.forEach(circulo => {
         circulo.addEventListener('mousedown', (e) => {
             if (!e.shiftKey) return;
             iniciarRotacaoMouse(e, circulo);
-        });
-        circulo.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                activeTouches[e.changedTouches[i].identifier] = {touch: e.changedTouches[i], circulo: circulo};
-            }
-            if (Object.keys(activeTouches).length >= 2) {
-                const touches = Object.values(activeTouches).map(t => t.touch);
-                initialAngle = Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX) * 180 / Math.PI;
-            }
         });
     });
 
@@ -188,40 +177,48 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', pararRotacaoMouse);
     }
 
+    // Rotação com Toque (Lógica aprimorada)
+    let touchState = {};
+
+    circulos.forEach(circulo => {
+        circulo.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 2) {
+                const rect = circulo.getBoundingClientRect();
+                touchState = {
+                    rotating: true,
+                    element: circulo,
+                    initialAngle: getAngle(e.touches[0], e.touches[1]),
+                    elementAngle: angulosAtuais[circulo.id],
+                    centroX: rect.left + rect.width / 2,
+                    centroY: rect.top + rect.height / 2,
+                };
+            }
+        }, { passive: false });
+    });
+
     document.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const touches = e.touches;
-        if (touches.length < 2) return;
-
-        let circuloEmFoco = null;
-        for (const id in activeTouches) {
-            if (activeTouches[id].touch.identifier === touches[0].identifier || activeTouches[id].touch.identifier === touches[1].identifier) {
-                circuloEmFoco = activeTouches[id].circulo;
-                break;
-            }
+        if (touchState.rotating && e.touches.length === 2) {
+            const currentAngle = getAngle(e.touches[0], e.touches[1]);
+            const deltaAngle = currentAngle - touchState.initialAngle;
+            const novoAngulo = touchState.elementAngle + deltaAngle;
+            aplicarRotacao(touchState.element, novoAngulo);
         }
-        if (!circuloEmFoco) return;
-
-        const currentAngle = Math.atan2(touches[1].clientY - touches[0].clientY, touches[1].clientX - touches[0].clientX) * 180 / Math.PI;
-        const deltaAngle = currentAngle - initialAngle;
-        let novoAngulo = angulosAtuais[circuloEmFoco.id] + deltaAngle;
-        aplicarRotacao(circuloEmFoco, novoAngulo);
-    });
+    }, { passive: false });
 
     document.addEventListener('touchend', (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touchId = e.changedTouches[i].identifier;
-            if (activeTouches[touchId]) {
-                const circulo = activeTouches[touchId].circulo;
-                const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(circulo).transform);
-                angulosAtuais[circulo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180/Math.PI));
-                delete activeTouches[touchId];
-            }
-        }
-        if (Object.keys(activeTouches).length < 2) {
-            initialAngle = -1;
+        if (touchState.rotating) {
+            const elementoAtivo = touchState.element;
+            const transformMatrix = new WebKitCSSMatrix(window.getComputedStyle(elementoAtivo).transform);
+            angulosAtuais[elementoAtivo.id] = Math.round(Math.atan2(transformMatrix.m21, transformMatrix.m11) * (180 / Math.PI));
+            touchState = {}; // Reseta o estado
         }
     });
+
+    function getAngle(t1, t2) {
+        return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+    }
 
     function aplicarRotacao(elemento, angulo) {
         elemento.style.transform = `rotate(${angulo}deg)`;

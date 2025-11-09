@@ -10,16 +10,18 @@ body {
 
 #app-container {
     display: flex;
+    flex-direction: column; /* Layout vertical por padrão */
     width: 100%;
     height: 100%;
 }
 
 #circulos-container {
-    flex: 0 0 600px; /* Largura original */
+    flex: 0 0 500px; /* Altura fixa para o círculo */
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
 }
 
 @keyframes futuristic-glow {
@@ -90,11 +92,12 @@ body {
 #display-info {
     flex: 1;
     background-color: #222;
-    border-left: 1px solid #444;
+    border-top: 1px solid #444; /* Borda superior em vez de esquerda */
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: auto;
     overflow: hidden;
+    flex-grow: 1;
 }
 
 #display-info .initial-message {
@@ -259,25 +262,7 @@ body {
     color: #fff;
 }
 
-/* Responsividade para Tablets */
-@media (max-width: 1024px) {
-    #app-container {
-        flex-direction: column;
-    }
-
-    #circulos-container {
-        flex: 0 0 500px; /* Altura fixa para o círculo */
-        width: 100%;
-    }
-
-    #display-info {
-        border-left: none;
-        border-top: 1px solid #444;
-        height: auto;
-        flex-grow: 1;
-    }
-}
-
+/* Responsividade para telas menores */
 @media (max-width: 600px) {
     #circulos-container {
         flex-basis: 400px;
